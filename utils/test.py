@@ -8,8 +8,8 @@ import imageio
 import torch
 from sklearn.metrics import accuracy_score, f1_score, jaccard_score, precision_score, recall_score
 
-from model import build_unet
-from utils import create_dir, seeding
+from utils.define_model import build_unet
+from utils.prepare_data import create_dir, seeding
 
 def calculate_metrics(y_true, y_pred):
     """ Ground truth """
@@ -37,7 +37,7 @@ def mask_parse(mask):
     mask = np.concatenate([mask, mask, mask], axis=-1)  ## (512, 512, 3)
     return mask
 
-if __name__ == "__main__":
+def model_performance():
     """ Seeding """
     seeding(31)
 

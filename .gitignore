@@ -1,3 +1,5 @@
 datasets/*
 utils/__pycache__/*
 leetcode.ipynb
+new_data/*
+files/*

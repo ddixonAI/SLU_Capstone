@@ -16,7 +16,7 @@ from torch.utils.data import Dataset
 
 """ Seeding the randomness. """
 def seeding(seed):
-    random.seed(seed)
+    np.random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -41,7 +41,7 @@ def load_data(path):
     train_y = sorted(glob(os.path.join(path, "datasets", "training", "training", "1st_manual", "*.gif")))
 
     test_x = sorted(glob(os.path.join(path, "datasets", "test", "test", "images", "*.tif")))
-    test_y = sorted(glob(os.path.join(path, "datasets", "test", "test", "1st_manual", "*.gif")))
+    test_y = sorted(glob(os.path.join(path, "datasets", "test", "test", "mask", "*.gif")))
 
     return (train_x, train_y), (test_x, test_y)
 
@@ -50,7 +50,7 @@ def augment_image(images, masks, save_path, augment=True):
 
     for idx, (x,y) in tqdm(enumerate(zip(images, masks)), total=len(images)):
         """ Extract the name """
-        name = x.split('/')[-1].split('.')[0]
+        name = x.split('/')[-1].split('\\')[-1].split('.')[0]
 
         """ Reading image and mask """
         x = cv2.imread(x, cv2.IMREAD_COLOR)
@@ -79,21 +79,21 @@ def augment_image(images, masks, save_path, augment=True):
             X = [x]
             Y = [y]
 
-            index = 0
-            for image, mask in zip(X, Y):
-                i = cv2.resize(image, size)
-                m = cv2.resize(mask, size)
+        index = 0
+        for image, mask in zip(X, Y):
+            i = cv2.resize(image, size)
+            m = cv2.resize(mask, size)
 
-                tmp_image_name = f'{name}_{index}.png'
-                tmp_mask_name = f'{name}_{index}.png'
+            tmp_image_name = f'{name}_{index}.png'
+            tmp_mask_name = f'{name}_{index}.png'
 
-                image_path = os.path.join(save_path, 'image', tmp_image_name)
-                mask_path = os.path.join(save_path, 'mask', tmp_mask_name)
+            image_path = os.path.join(save_path, "image", tmp_image_name)
+            mask_path = os.path.join(save_path, "mask", tmp_mask_name)
 
-                cv2.imwrite(image_path, i)
-                cv2.imwrite(mask_path, m)
+            cv2.imwrite(image_path, i)
+            cv2.imwrite(mask_path, m)
 
-                index += 1
+            index += 1
 
 
 class DriveDataset(Dataset):
@@ -122,3 +122,23 @@ class DriveDataset(Dataset):
 
     def __len__(self):
         return self.n_samples
+
+def prepare_data(data_path):
+    """ Seeding """
+    np.random.seed(31)
+
+    """ Load the data """
+    (train_x, train_y), (test_x, test_y) = load_data(data_path)
+
+    print(f'Train Image Count: X: {len(train_x)}, Y: {len(train_y)}')
+    print(f'Test Image Count: X: {len(test_x)}, Y: {len(test_y)}')
+
+    """ Create new directories to store images """
+    create_dir('new_data/train/image/')
+    create_dir('new_data/train/mask/')
+    create_dir('new_data/test/image/')
+    create_dir('new_data/test/mask/')
+
+    """ Perform augmentation """
+    augment_image(train_x, train_y, "new_data/train/", augment=True)
+    augment_image(test_x, test_y, "new_data/test/", augment=False)

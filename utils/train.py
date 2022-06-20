@@ -6,9 +6,9 @@ import torch
 from torch.utils.data import DataLoader
 import torch.nn as nn
 
-from define_model import build_unet
-from loss import DiceLoss, DiceBCELoss
-from prepare_data import seeding, create_dir, epoch_time, DriveDataset
+from utils.define_model import build_unet
+from utils.loss import DiceLoss, DiceBCELoss
+from utils.prepare_data import seeding, create_dir, epoch_time, DriveDataset
 
 def train(model, loader, optimizer, loss_fn, device):
 
@@ -46,7 +46,7 @@ def evaluate(model, loader, loss_fn, device):
         epoch_loss = epoch_loss/len(loader)
     return epoch_loss
 
-if __name__ == "__main__":
+def train_model():
     """ Seeding """
     seeding(31)
 
@@ -54,11 +54,11 @@ if __name__ == "__main__":
     create_dir("files")
 
     """ Load dataset """
-    train_x = sorted(glob("../new_data/train/image/*"))
-    train_y = sorted(glob("../new_data/train/mask/*"))
+    train_x = sorted(glob("C:/Users/Derek/Documents/SLU_Capstone/new_data/train/image/*"))
+    train_y = sorted(glob("C:/Users/Derek/Documents/SLU_Capstone/new_data/train/mask/*"))
 
-    valid_x = sorted(glob("../new_data/test/image/*"))
-    valid_y = sorted(glob("../new_data/test/mask/*"))
+    valid_x = sorted(glob("C:/Users/Derek/Documents/SLU_Capstone/new_data/test/image/*"))
+    valid_y = sorted(glob("C:/Users/Derek/Documents/SLU_Capstone/new_data/test/mask/*"))
 
     data_str = f"Dataset Size:\nTrain: {len(train_x)} - Valid: {len(valid_x)}\n"
     print(data_str)
