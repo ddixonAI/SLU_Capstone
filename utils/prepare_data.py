@@ -1,91 +1,100 @@
-'''
-Most of the code below is adopted from https://arxiv.org/abs/2004.03702.
-Please cite accordingly if you use.
-'''
 
-import cv2
+"""
+Code mostly adopted from here: https://github.com/nikhilroxtomar/Retina-Blood-Vessel-Segmentation-in-PyTorch/tree/main/UNET
+"""
+
+import os
 import numpy as np
+import cv2
+from glob import glob
+from tqdm import tqdm
+import imageio
+from albumentations import HorizontalFlip, VerticalFlip, Rotate
 
+def create_dir(path):
+    """Creates new directories if they don't already exist"""
+    if not os.path.exists(path):
+        os.makedirs(path)
 
-def random_rotation(x_image, y_image):
-    rows_x,cols_x, chl_x = x_image.shape
-    rows_y,cols_y = y_image.shape
-    rand_num = np.random.randint(-40,40)
-    M1 = cv2.getRotationMatrix2D((cols_x/2,rows_x/2),rand_num,1)
-    M2 = cv2.getRotationMatrix2D((cols_y/2,rows_y/2),rand_num,1)
-    x_image = cv2.warpAffine(x_image,M1,(cols_x,rows_x))
-    y_image = cv2.warpAffine(y_image,M2,(cols_y,rows_y))
-    return np.array(x_image), np.array(y_image)
+def load_data(path):
 
+    train_x = sorted(glob(os.path.join(path, "datasets", "training", "training", "images", "*.tif")))
+    train_y = sorted(glob(os.path.join(path, "datasets", "training", "training", "1st_manual", "*.gif")))
 
-def h_flip(x_image, y_image):
-    x_image = cv2.flip(x_image, 1)
-    y_image = cv2.flip(y_image, 1)
-    return x_image, y_image
+    test_x = sorted(glob(os.path.join(path, "datasets", "test", "test", "images", "*.tif")))
+    test_y = sorted(glob(os.path.join(path, "datasets", "test", "test", "1st_manual", "*.gif")))
 
+    return (train_x, train_y), (test_x, test_y)
 
-def v_flip(x_image, y_image):
-    x_image = cv2.flip(x_image, 0)
-    y_image = cv2.flip(y_image, 0)
-    return x_image, y_image
+def augment_image(images, masks, save_path, augment=True):
+    size = (512, 512)
 
+    for idx, (x,y) in tqdm(enumerate(zip(images, masks)), total=len(images)):
+        """ Extract the name """
+        name = x.split('/')[-1].split('.')[0]
 
-def hv_flip(x_image, y_image):
-    x_image = cv2.flip(x_image, -1)
-    y_image = cv2.flip(y_image, -1)
-    return x_image, y_image
+        """ Reading image and mask """
+        x = cv2.imread(x, cv2.IMREAD_COLOR)
+        y = imageio.mimread(y)[0]
 
+        """ Defining augmentation parameters and resizing """
+        if augment == True:
+            aug = HorizontalFlip(p=1.0)
+            augmented = aug(image=x, mask=y)
+            x1 = augmented['image']
+            y1 = augmented['mask']
 
-def img_augmentation(x_train, y_train):
-    x_rotat = []
-    y_rotat = []
-    x_flip = []
-    y_flip = []
+            aug = VerticalFlip(p=1.0)
+            augmented = aug(image=x, mask=y)
+            x2 = augmented['image']
+            y2 = augmented['mask']
 
-    for idx in range(len(x_train)):
-        x, y = random_rotation(x_train[idx], y_train[idx])
-        x_rotat.append(x)
-        y_rotat.append(y)
-        x, y = hv_flip(x_train[idx], y_train[idx])
-        x_flip.append(x)
-        y_flip.append(y)
-        x, y = h_flip(x_train[idx], y_train[idx])
-        x_flip.append(x)
-        y_flip.append(y)
-        x, y = v_flip(x_train[idx], y_train[idx])
-        x_flip.append(x)
-        y_flip.append(y)
-    return np.array(x_rotat), np.array(y_rotat), np.array(x_flip), np.array(y_flip)
+            aug = Rotate(limit=45, p=1.0)
+            augmented = aug(image=x, mask=y)
+            x3 = augmented['image']
+            y3 = augmented['mask']
 
-
-def crop_to_shape(data, shape):
-    """
-    Crops the array to the given image shape by removing the border (expects a tensor of shape [batches, nx, ny, channels].
-    :param data: the array to crop
-    :param shape: the target shape
-    """
-    #
-
-    offset0 = (data.shape[1] - shape[1])//2
-    offset1 = (data.shape[2] - shape[2])//2
-    if offset0==0:
-        if data.shape[1] % 2 == 1 or shape[1] % 2 == 1:
-            return data[:, offset0:data.shape[1], offset1:(-offset1)]
-        elif data.shape[2] % 2 == 1 or shape[2] % 2 == 1:
-            return data[:, offset0:data.shape[1], offset1:(-offset1 - 1)]
+            X = [x, x1, x2, x3]
+            Y = [y, y1, y2, y3]
         else:
-            return data[:, offset0:data.shape[1], offset1:(-offset1)]
-    elif offset1==0:
-        if data.shape[1] % 2 == 1 or shape[1] % 2 == 1:
-            return data[:, offset0:(-offset0 - 1), offset1:data.shape[2]]
-        elif data.shape[2] % 2 == 1 or shape[2] % 2 == 1:
-            return data[:, offset0:-offset0, offset1:data.shape[2]]
-        else:
-            return data[:, offset0:-offset0, offset1:data.shape[2]]
-    else:
-        if data.shape[1] % 2 == 1 or shape[1] % 2 == 1:
-            return data[:, offset0:(-offset0 - 1), offset1:(-offset1)]
-        elif data.shape[2] % 2 == 1 or shape[2] % 2 == 1:
-            return data[:, offset0:-offset0, offset1:(-offset1-1)]
-        else:
-            return data[:, offset0:-offset0, offset1:(-offset1)]
+            X = [x]
+            Y = [y]
+
+            index = 0
+            for image, mask in zip(X, Y):
+                i = cv2.resize(image, size)
+                m = cv2.resize(mask, size)
+
+                tmp_image_name = f'{name}_{index}.png'
+                tmp_mask_name = f'{name}_{index}.png'
+
+                image_path = os.path.join(save_path, 'image', tmp_image_name)
+                mask_path = os.path.join(save_path, 'mask', tmp_mask_name)
+
+                cv2.imwrite(image_path, i)
+                cv2.imwrite(mask_path, m)
+
+                index += 1
+
+
+if __name__ == '__main__':
+
+    """Seeding"""
+    np.random.seed(31)
+
+    """Load Data"""
+    data_path = 'c:\Users\Derek\Documents\SLU_Capstone'
+    (train_x, train_y), (test_x, test_y) = load_data(data_path)
+
+    print(f'Train X size: {len(train_x)}, Train Y size: {len(train_y)}')
+    print(f'Test X size: {len(test_x)}, Test Y size: {len(test_y)}')
+
+    """ Create directories to store the augmented images """
+    create_dir('new_data/train/image/')
+    create_dir('new_data/train/mask/')
+    create_dir('new_data/test/image/')
+    create_dir('new_data/test/mask/')
+
+    """ Image augmentation """
+    augment_image(train_x, train_y, "new_data/train/", augment=True)
+    augment_image(test_x, test_y, "new_data/test/", augment=False)
