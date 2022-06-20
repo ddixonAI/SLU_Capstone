@@ -10,6 +10,25 @@ from glob import glob
 from tqdm import tqdm
 import imageio
 from albumentations import HorizontalFlip, VerticalFlip, Rotate
+import torch
+import time
+from torch.utils.data import Dataset
+
+""" Seeding the randomness. """
+def seeding(seed):
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+
+""" Calculate the time taken """
+def epoch_time(start_time, end_time):
+    elapsed_time = end_time - start_time
+    elapsed_mins = int(elapsed_time / 60)
+    elapsed_secs = int(elapsed_time - (elapsed_mins * 60))
+    return elapsed_mins, elapsed_secs
 
 def create_dir(path):
     """Creates new directories if they don't already exist"""
@@ -77,24 +96,29 @@ def augment_image(images, masks, save_path, augment=True):
                 index += 1
 
 
-if __name__ == '__main__':
+class DriveDataset(Dataset):
+    def __init__(self, images_path, masks_path):
 
-    """Seeding"""
-    np.random.seed(31)
+        self.images_path = images_path
+        self.masks_path = masks_path
+        self.n_samples = len(images_path)
 
-    """Load Data"""
-    data_path = 'c:\Users\Derek\Documents\SLU_Capstone'
-    (train_x, train_y), (test_x, test_y) = load_data(data_path)
+    def __getitem__(self, index):
+        """ Reading image """
+        image = cv2.imread(self.images_path[index], cv2.IMREAD_COLOR)
+        image = image/255.0 ## (512, 512, 3)
+        image = np.transpose(image, (2, 0, 1))  ## (3, 512, 512)
+        image = image.astype(np.float32)
+        image = torch.from_numpy(image)
 
-    print(f'Train X size: {len(train_x)}, Train Y size: {len(train_y)}')
-    print(f'Test X size: {len(test_x)}, Test Y size: {len(test_y)}')
+        """ Reading mask """
+        mask = cv2.imread(self.masks_path[index], cv2.IMREAD_GRAYSCALE)
+        mask = mask/255.0   ## (512, 512)
+        mask = np.expand_dims(mask, axis=0) ## (1, 512, 512)
+        mask = mask.astype(np.float32)
+        mask = torch.from_numpy(mask)
 
-    """ Create directories to store the augmented images """
-    create_dir('new_data/train/image/')
-    create_dir('new_data/train/mask/')
-    create_dir('new_data/test/image/')
-    create_dir('new_data/test/mask/')
+        return image, mask
 
-    """ Image augmentation """
-    augment_image(train_x, train_y, "new_data/train/", augment=True)
-    augment_image(test_x, test_y, "new_data/test/", augment=False)
+    def __len__(self):
+        return self.n_samples
