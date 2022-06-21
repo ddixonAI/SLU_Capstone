@@ -45,8 +45,8 @@ def model_performance():
     create_dir("results")
 
     """ Load dataset """
-    test_x = sorted(glob("../new_data/test/image/*"))
-    test_y = sorted(glob("../new_data/test/mask/*"))
+    test_x = sorted(glob("C:/Users/Derek/Documents/SLU_Capstone/new_data/test/image/*"))
+    test_y = sorted(glob("C:/Users/Derek/Documents/SLU_Capstone/new_data/test/mask/*"))
 
     """ Hyperparameters """
     H = 512
@@ -67,7 +67,7 @@ def model_performance():
 
     for i, (x, y) in tqdm(enumerate(zip(test_x, test_y)), total=len(test_x)):
         """ Extract the name """
-        name = x.split("/")[-1].split(".")[0]
+        name = x.split('/')[-1].split('\\')[-1].split('.')[0]
 
         """ Reading image """
         image = cv2.imread(x, cv2.IMREAD_COLOR) ## (512, 512, 3)
