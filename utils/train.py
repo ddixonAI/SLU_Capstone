@@ -68,7 +68,7 @@ def train_model():
     W = 512
     size = (H, W)
     batch_size = 2
-    num_epochs = 50
+    num_epochs = 100
     lr = 1e-4
     checkpoint_path = "files/checkpoint.pth"
 
