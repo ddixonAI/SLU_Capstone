@@ -91,6 +91,7 @@ def train_model():
     )
 
     device = torch.device('cuda')   ## GTX 3090 24GB
+    print(f'Device used: {device}')
     model = build_unet()
     model = model.to(device)
 

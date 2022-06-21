@@ -41,7 +41,7 @@ def load_data(path):
     train_y = sorted(glob(os.path.join(path, "datasets", "training", "training", "1st_manual", "*.gif")))
 
     test_x = sorted(glob(os.path.join(path, "datasets", "test", "test", "images", "*.tif")))
-    test_y = sorted(glob(os.path.join(path, "datasets", "test", "test", "mask", "*.gif")))
+    test_y = sorted(glob(os.path.join(path, "datasets", "test", "test", "1st_manual", "*.gif")))
 
     return (train_x, train_y), (test_x, test_y)
 
