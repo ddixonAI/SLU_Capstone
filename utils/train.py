@@ -8,6 +8,7 @@ import torch.nn as nn
 
 from utils.define_unet import build_unet
 from utils.define_fct import build_fct
+from utils.define_fct import init_weights
 from utils.loss import DiceLoss, DiceBCELoss
 from utils.prepare_data import seeding, create_dir, epoch_time, DriveDataset
 
@@ -47,7 +48,7 @@ def evaluate(model, loader, loss_fn, device):
         epoch_loss = epoch_loss/len(loader)
     return epoch_loss
 
-def train_model():
+def train_model_unet():
     """ Seeding """
     seeding(31)
 
@@ -187,6 +188,7 @@ def train_model_fct():
     print(f'Device used: {device}')
     model = build_fct()
     model = model.to(device)
+    model.apply(init_weights)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, verbose=True)

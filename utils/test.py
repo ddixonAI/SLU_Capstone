@@ -7,8 +7,9 @@ from tqdm import tqdm
 import imageio
 import torch
 from sklearn.metrics import accuracy_score, f1_score, jaccard_score, precision_score, recall_score
+from utils.define_fct import build_fct
 
-from utils.define_model import build_unet
+from utils.define_unet import build_unet
 from utils.prepare_data import create_dir, seeding
 
 def calculate_metrics(y_true, y_pred):
@@ -37,7 +38,7 @@ def mask_parse(mask):
     mask = np.concatenate([mask, mask, mask], axis=-1)  ## (512, 512, 3)
     return mask
 
-def model_performance():
+def model_performance(modArch):
     """ Seeding """
     seeding(31)
 
@@ -56,8 +57,10 @@ def model_performance():
 
     """ Load the checkpoint """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    model = build_unet()
+    if modArch == 'unet':
+        model = build_unet()
+    else:
+        model = build_fct()
     model = model.to(device)
     model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     model.eval()
