@@ -243,7 +243,7 @@ class DS_out(nn.Module):
         return out
         
 
-class FCT(nn.Module):
+class build_fct(nn.Module):
     def __init__(self):
         super().__init__()
 
@@ -291,37 +291,25 @@ class FCT(nn.Module):
         scale_img_4 = self.scale_img(scale_img_3)  
 
         x = self.block_1(x)
-        # print(f"Block 1 out -> {list(x.size())}")
         skip1 = x
         x = self.block_2(x, scale_img_2)
-        # print(f"Block 2 out -> {list(x.size())}")
         skip2 = x
         x = self.block_3(x, scale_img_3)
-        # print(f"Block 3 out -> {list(x.size())}")
         skip3 = x
         x = self.block_4(x, scale_img_4)
-        # print(f"Block 4 out -> {list(x.size())}")
         skip4 = x
         x = self.block_5(x)
-        # print(f"Block 5 out -> {list(x.size())}")
         x = self.block_6(x, skip4)
-        # print(f"Block 6 out -> {list(x.size())}")
         x = self.block_7(x, skip3)
-        # print(f"Block 7 out -> {list(x.size())}")
         skip7 = x
         x = self.block_8(x, skip2)
-        # print(f"Block 8 out -> {list(x.size())}")
         skip8 = x
         x = self.block_9(x, skip1)
-        # print(f"Block 9 out -> {list(x.size())}")
         skip9 = x
 
         out7 = self.ds7(skip7)
-        # print(f"DS 7 out -> {list(out7.size())}")
         out8 = self.ds8(skip8)
-        # print(f"DS 8 out -> {list(out8.size())}")
         out9 = self.ds9(skip9)
-        # print(f"DS 9 out -> {list(out9.size())}")
 
         return out7, out8, out9
 
