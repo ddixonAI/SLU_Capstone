@@ -118,7 +118,17 @@ def model_performance():
     recall = metrics_score[2]/len(test_x)
     precision = metrics_score[3]/len(test_x)
     acc = metrics_score[4]/len(test_x)
-    print(f"Jaccard: {jaccard:1.4f} - F1: {f1:1.4f} - Recall: {recall:1.4f} - Precision: {precision:1.4f} - Acc: {acc:1.4f}")
+    print(f"Jaccard: {jaccard:1.4f}")
+    print('')
+    print(f'F1: {f1:1.4f}')
+    print('')
+    print(f'Precision: {precision:1.4f}')
+    print('')
+    print(f'Recall: {recall:1.4f}')
+    print('')
+    print(f'Accuracy: {acc:1.4f}')
+    print('')
+
 
     fps = 1/np.mean(time_taken)
     print("FPS: ", fps)
