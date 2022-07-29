@@ -6,7 +6,8 @@ https://github.com/Thanos-DB/FullyConvolutionalTransformer/blob/main/PyTorch/mai
 
 import torch
 import torch.nn as nn
-
+import torch.nn.functional as F
+import numpy as np
 
 """Attention Module"""
 class Attention(nn.Module):
