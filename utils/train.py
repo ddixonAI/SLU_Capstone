@@ -12,7 +12,7 @@ from utils.define_fct import init_weights
 from utils.loss import DiceLoss, DiceBCELoss
 from utils.prepare_data import seeding, create_dir, epoch_time, DriveDataset
 
-def train(model, loader, optimizer, loss_fn, device):
+def train(model, loader, optimizer, loss_fn, device, model_choice):
 
     epoch_loss = 0.0
 
@@ -22,8 +22,12 @@ def train(model, loader, optimizer, loss_fn, device):
         y = y.to(device, dtype=torch.float32)
 
         optimizer.zero_grad()
-        y_pred = model(x)
-        loss = loss_fn(y_pred, y)
+        if model_choice == 'fct':
+            y_pred = model(x)
+            loss = loss_fn(y_pred[2], y)
+        else:
+            y_pred = model(x)
+            loss = loss_fn(y_pred, y)
         loss.backward()
         optimizer.step()
         epoch_loss += loss.item()
@@ -31,7 +35,7 @@ def train(model, loader, optimizer, loss_fn, device):
     epoch_loss = epoch_loss/len(loader)
     return epoch_loss
 
-def evaluate(model, loader, loss_fn, device):
+def evaluate(model, loader, loss_fn, device, model_choice):
 
     epoch_loss = 0.0
 
@@ -42,7 +46,10 @@ def evaluate(model, loader, loss_fn, device):
             y = y.to(device, dtype=torch.float32)
 
             y_pred = model(x)
-            loss = loss_fn(y_pred, y)
+            if model_choice == 'fct':
+                loss = loss_fn(y_pred[2], y)
+            else:
+                loss = loss_fn(y_pred, y)
             epoch_loss += loss.item()
 
         epoch_loss = epoch_loss/len(loader)
@@ -112,7 +119,7 @@ def train_model_unet():
 
             start_time = time.time()
 
-            train_loss = train(model, train_loader, optimizer, loss_fn, device)
+            train_loss = train(model, train_loader, optimizer, loss_fn, device, 'unet')
             valid_loss = evaluate(model, valid_loader, loss_fn, device)
 
             """ Saving the model """
@@ -161,7 +168,7 @@ def train_model_fct():
     H = 512
     W = 512
     size = (H, W)
-    batch_size = 2
+    batch_size = 1
     num_epochs = 100
     lr = 1e-4
     checkpoint_path = "files/checkpoint.pth"
@@ -174,14 +181,14 @@ def train_model_fct():
         dataset=train_dataset,
         batch_size=batch_size,
         shuffle=True,
-        num_workers=2
+        num_workers=0
     )
 
     valid_loader = DataLoader(
         dataset=valid_dataset,
         batch_size=batch_size,
         shuffle=False,
-        num_workers=2
+        num_workers=0
     )
 
     device = torch.device('cuda')   ## GTX 3090 24GB
@@ -192,7 +199,7 @@ def train_model_fct():
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, verbose=True)
-    loss_fn = DiceBCELoss()
+    loss_fn = nn.BCELoss() # changing the loss function to match the original implementation
 
     """ Training the model """
     best_valid_loss = float("inf")
@@ -205,7 +212,7 @@ def train_model_fct():
 
             start_time = time.time()
 
-            train_loss = train(model, train_loader, optimizer, loss_fn, device)
+            train_loss = train(model, train_loader, optimizer, loss_fn, device, 'fct')
             valid_loss = evaluate(model, valid_loader, loss_fn, device)
 
             """ Saving the model """
