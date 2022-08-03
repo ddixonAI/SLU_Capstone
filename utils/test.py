@@ -50,10 +50,15 @@ def model_performance(modArch):
     test_y = sorted(glob("C:/Users/Derek/Documents/SLU_Capstone/new_data/test/mask/*"))
 
     """ Hyperparameters """
-    H = 512
-    W = 512
+    if modArch == 'unet':
+        H = 512
+        W = 512
+        checkpoint_path = "files/checkpoint_unet.pth"
+    if modArch == 'fct':
+        H = 256
+        W = 256
+        checkpoint_path = "files/checkpoint.pth"
     size = (W, H)
-    checkpoint_path = "files/checkpoint.pth"
 
     """ Load the checkpoint """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -73,48 +78,95 @@ def model_performance(modArch):
         name = x.split('/')[-1].split('\\')[-1].split('.')[0]
 
         """ Reading image """
-        image = cv2.imread(x, cv2.IMREAD_COLOR) ## (512, 512, 3)
-        x = np.transpose(image, (2, 0, 1))      ## (3, 512, 512)
-        x = x/255.0
-        x = np.expand_dims(x, axis=0)           ## (1, 3, 512, 512)
-        x = x.astype(np.float32)
-        x = torch.from_numpy(x)
-        x = x.to(device)
+        if modArch == 'unet':
+            image = cv2.imread(x, cv2.IMREAD_COLOR) ## (512, 512, 3)
+            x = np.transpose(image, (2, 0, 1))      ## (3, 512, 512)
+            x = x/255.0
+            x = np.expand_dims(x, axis=0)           ## (1, 3, 512, 512)
+            x = x.astype(np.float32)
+            x = torch.from_numpy(x)
+            x = x.to(device)
+        if modArch == 'fct':
+            image = cv2.imread(x, cv2.IMREAD_COLOR)
+            # Shrink Image for VRAM Limitations
+            scale_percent = 0.5
+            width = int(image.shape[1]*scale_percent)
+            height = int(image.shape[0]*scale_percent)
+            dim = (width, height)
+            image = cv2.resize(image, dim, interpolation = cv2.INTER_AREA)
+            x = np.transpose(image, (2, 0, 1))      ## (3, 256, 256)
+            x = x/255.0
+            x = np.expand_dims(x, axis=0)           ## (1, 3, 256, 256)
+            x = x.astype(np.float32)
+            x = torch.from_numpy(x)
+            x = x.to(device)
 
         """ Reading mask """
-        mask = cv2.imread(y, cv2.IMREAD_GRAYSCALE)  ## (512, 512)
-        y = np.expand_dims(mask, axis=0)            ## (1, 512, 512)
-        y = y/255.0
-        y = np.expand_dims(y, axis=0)               ## (1, 1, 512, 512)
-        y = y.astype(np.float32)
-        y = torch.from_numpy(y)
-        y = y.to(device)
+        if modArch == 'unet':
+            mask = cv2.imread(y, cv2.IMREAD_GRAYSCALE)  ## (512, 512)
+            y = np.expand_dims(mask, axis=0)            ## (1, 512, 512)
+            y = y/255.0
+            y = np.expand_dims(y, axis=0)               ## (1, 1, 512, 512)
+            y = y.astype(np.float32)
+            y = torch.from_numpy(y)
+            y = y.to(device)
+        if modArch == 'fct':
+            mask = cv2.imread(y, cv2.IMREAD_GRAYSCALE)  ## (512, 512)
+            # Shrink Image for VRAM Limitations
+            scale_percent = 0.5
+            width = int(mask.shape[1]*scale_percent)
+            height = int(mask.shape[0]*scale_percent)
+            dim = (width, height)
+            mask = cv2.resize(mask, dim, interpolation = cv2.INTER_AREA)
+            y = np.expand_dims(mask, axis=0)            ## (1, 256, 256)
+            y = y/255.0
+            y = np.expand_dims(y, axis=0)               ## (1, 1, 256, 256)
+            y = y.astype(np.float32)
+            y = torch.from_numpy(y)
+            y = y.to(device)
 
         with torch.no_grad():
             """ Prediction and Calculating FPS """
             start_time = time.time()
-            pred_y = model(x)
-            pred_y = torch.sigmoid(pred_y)
+            if modArch == 'unet':
+                pred_y = model(x)
+                pred_y = torch.sigmoid(pred_y)
+            else:
+                pred_y = model(x)
+                #pred_y = torch.sigmoid(pred_y[2])
             total_time = time.time() - start_time
             time_taken.append(total_time)
 
-
-            score = calculate_metrics(y, pred_y)
-            metrics_score = list(map(add, metrics_score, score))
-            pred_y = pred_y[0].cpu().numpy()        ## (1, 512, 512)
-            pred_y = np.squeeze(pred_y, axis=0)     ## (512, 512)
-            pred_y = pred_y > 0.5
-            pred_y = np.array(pred_y, dtype=np.uint8)
+            if modArch == 'unet':
+                score = calculate_metrics(y, pred_y)
+                metrics_score = list(map(add, metrics_score, score))
+                pred_y = pred_y[0].cpu().numpy()        ## (1, 512, 512)
+                pred_y = np.squeeze(pred_y, axis=0)     ## (512, 512)
+                pred_y = pred_y > 0.5
+                pred_y = np.array(pred_y, dtype=np.uint8)
+            else:
+                score = calculate_metrics(y, pred_y[2])
+                metrics_score = list(map(add, metrics_score, score))
+                pred_y = pred_y[2][0].cpu().numpy()        ## (1, 256, 256)
+                pred_y = np.squeeze(pred_y, axis=0)     ## (256, 256)
+                pred_y = pred_y > 0.5
+                pred_y = np.array(pred_y, dtype=np.uint8)
 
         """ Saving masks """
         ori_mask = mask_parse(mask)
         pred_y = mask_parse(pred_y)
         line = np.ones((size[1], 10, 3)) * 128
 
-        cat_images = np.concatenate(
-            [image, line, ori_mask, line, pred_y * 255], axis=1
-        )
-        cv2.imwrite(f"results/{name}.png", cat_images)
+        if modArch == 'unet':
+            cat_images = np.concatenate(
+                [image, line, ori_mask, line, pred_y * 255], axis=1
+            )
+            cv2.imwrite(f"results/{name}_unet.png", cat_images)
+        else:
+            cat_images = np.concatenate(
+                [image, line, ori_mask, line, pred_y * 255], axis=1
+            )
+            cv2.imwrite(f'results/{name}_fct.png', cat_images)
 
     jaccard = metrics_score[0]/len(test_x)
     f1 = metrics_score[1]/len(test_x)

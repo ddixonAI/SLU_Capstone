@@ -164,7 +164,7 @@ class Block_encoder_bottleneck(nn.Module):
             self.trans = Transformer(out_channels, att_heads, dpr)
         elif ((self.blk=="second") or (self.blk=="third") or (self.blk=="fourth")):
             self.layernorm = nn.LayerNorm(in_channels, eps=1e-5)
-            self.conv1 = nn.Conv2d(1, in_channels, 3, 1, padding="same")
+            self.conv1 = nn.Conv2d(3, in_channels, 3, 1, padding="same")
             self.conv2 = nn.Conv2d(out_channels, out_channels, 3, 1, padding="same")
             self.conv3 = nn.Conv2d(out_channels, out_channels, 3, 1, padding="same")
             self.trans = Transformer(out_channels, att_heads, dpr)
@@ -224,7 +224,7 @@ class DS_out(nn.Module):
         self.layernorm = nn.LayerNorm(in_channels, eps=1e-5)
         self.conv1 = nn.Conv2d(in_channels, in_channels, 3, 1, padding="same")
         self.conv2 = nn.Conv2d(in_channels, in_channels, 3, 1, padding="same")
-        self.conv3 = nn.Conv2d(in_channels, 4, 3, 1, padding="same")
+        self.conv3 = nn.Conv2d(in_channels, 1, 3, 1, padding="same")
 
     def forward(self, x):
         x1 = self.upsample(x)
@@ -233,7 +233,7 @@ class DS_out(nn.Module):
         x1 = x1.permute(0, 3, 1, 2)
         x1 = F.relu(self.conv1(x1))
         x1 = F.relu(self.conv2(x1))
-        out = F.sigmoid(self.conv3(x1))
+        out = torch.sigmoid(self.conv3(x1))
         
         return out
         
@@ -258,7 +258,7 @@ class build_fct(nn.Module):
 
         # shape
         #init_sizes = torch.ones((2,224,224,1)) # original code
-        init_sizes = torch.ones((2,512,512,3))
+        init_sizes = torch.ones((2,256,256,3))
         init_sizes = init_sizes.permute(0, 3, 1, 2) # why are we permuting here?
 
         # Multi-scale input
@@ -275,9 +275,9 @@ class build_fct(nn.Module):
         self.block_8 = Block_decoder(filters[6], filters[7], att_heads[7], dpr[7])
         self.block_9 = Block_decoder(filters[7], filters[8], att_heads[8], dpr[8])
 
-        self.ds7 = DS_out(filters[6], 4) # (channels in, channels out), class defined above ... 32,16,8
-        self.ds8 = DS_out(filters[7], 4)
-        self.ds9 = DS_out(filters[8], 4)
+        self.ds7 = DS_out(filters[6], 1) # (channels in, channels out), class defined above ... 32,16,8
+        self.ds8 = DS_out(filters[7], 1)
+        self.ds9 = DS_out(filters[8], 1)
         
     def forward(self, x):
 
@@ -286,10 +286,7 @@ class build_fct(nn.Module):
         scale_img_3 = self.scale_img(scale_img_2)
         scale_img_4 = self.scale_img(scale_img_3)  
 
-        print('fails before 1')
-        print(x.shape)
         x = self.block_1(x)
-        print('fails before 2')
         skip1 = x
         x = self.block_2(x, scale_img_2)
         skip2 = x

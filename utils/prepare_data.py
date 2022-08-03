@@ -142,3 +142,64 @@ def prepare_data(data_path):
     """ Perform augmentation """
     augment_image(train_x, train_y, "new_data/train/", augment=True)
     augment_image(test_x, test_y, "new_data/test/", augment=False)
+
+class DriveDatasetFCT(Dataset):
+    def __init__(self, images_path, masks_path):
+
+        self.images_path = images_path
+        self.masks_path = masks_path
+        self.n_samples = len(images_path)
+
+    def __getitem__(self, index):
+        """ Reading image """
+        image = cv2.imread(self.images_path[index], cv2.IMREAD_COLOR)
+        # Shrink Image for VRAM Limitations
+        scale_percent = 0.5
+        width = int(image.shape[1]*scale_percent)
+        height = int(image.shape[0]*scale_percent)
+        dim = (width, height)
+        image = cv2.resize(image, dim, interpolation = cv2.INTER_AREA)
+
+        image = image/255.0 ## (512, 512, 3)
+        image = np.transpose(image, (2, 0, 1))  ## (3, 512, 512)
+        image = image.astype(np.float32)
+        image = torch.from_numpy(image)
+
+        """ Reading mask """
+        mask = cv2.imread(self.masks_path[index], cv2.IMREAD_GRAYSCALE)
+        # Shrink Image for VRAM Limitations
+        scale_percent = 0.5
+        width = int(mask.shape[1]*scale_percent)
+        height = int(mask.shape[0]*scale_percent)
+        dim = (width, height)
+        mask = cv2.resize(mask, dim, interpolation = cv2.INTER_AREA)
+
+        mask = mask/255.0   ## (512, 512)
+        mask = np.expand_dims(mask, axis=0) ## (1, 512, 512)
+        mask = mask.astype(np.float32)
+        mask = torch.from_numpy(mask)
+
+        return image, mask
+
+    def __len__(self):
+        return self.n_samples
+
+def prepare_data(data_path):
+    """ Seeding """
+    np.random.seed(31)
+
+    """ Load the data """
+    (train_x, train_y), (test_x, test_y) = load_data(data_path)
+
+    print(f'Train Image Count: X: {len(train_x)}, Y: {len(train_y)}')
+    print(f'Test Image Count: X: {len(test_x)}, Y: {len(test_y)}')
+
+    """ Create new directories to store images """
+    create_dir('new_data/train/image/')
+    create_dir('new_data/train/mask/')
+    create_dir('new_data/test/image/')
+    create_dir('new_data/test/mask/')
+
+    """ Perform augmentation """
+    augment_image(train_x, train_y, "new_data/train/", augment=True)
+    augment_image(test_x, test_y, "new_data/test/", augment=False)

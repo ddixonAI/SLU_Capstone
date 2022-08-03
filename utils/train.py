@@ -10,7 +10,7 @@ from utils.define_unet import build_unet
 from utils.define_fct import build_fct
 from utils.define_fct import init_weights
 from utils.loss import DiceLoss, DiceBCELoss
-from utils.prepare_data import seeding, create_dir, epoch_time, DriveDataset
+from utils.prepare_data import seeding, create_dir, epoch_time, DriveDataset, DriveDatasetFCT
 
 def train(model, loader, optimizer, loss_fn, device, model_choice):
 
@@ -79,7 +79,7 @@ def train_model_unet():
     batch_size = 2
     num_epochs = 100
     lr = 1e-4
-    checkpoint_path = "files/checkpoint.pth"
+    checkpoint_path = "files/checkpoint_unet.pth"
 
     """ Dataset and loader """
     train_dataset = DriveDataset(train_x, train_y)
@@ -169,13 +169,13 @@ def train_model_fct():
     W = 512
     size = (H, W)
     batch_size = 1
-    num_epochs = 100
-    lr = 1e-4
+    num_epochs = 200
+    lr = 1e-3
     checkpoint_path = "files/checkpoint.pth"
 
     """ Dataset and loader """
-    train_dataset = DriveDataset(train_x, train_y)
-    valid_dataset = DriveDataset(valid_x, valid_y)
+    train_dataset = DriveDatasetFCT(train_x, train_y)
+    valid_dataset = DriveDatasetFCT(valid_x, valid_y)
 
     train_loader = DataLoader(
         dataset=train_dataset,
@@ -199,7 +199,7 @@ def train_model_fct():
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, verbose=True)
-    loss_fn = nn.BCELoss() # changing the loss function to match the original implementation
+    loss_fn = nn.BCELoss() # not the same loss function from the original implementation
 
     """ Training the model """
     best_valid_loss = float("inf")
@@ -213,7 +213,7 @@ def train_model_fct():
             start_time = time.time()
 
             train_loss = train(model, train_loader, optimizer, loss_fn, device, 'fct')
-            valid_loss = evaluate(model, valid_loader, loss_fn, device)
+            valid_loss = evaluate(model, valid_loader, loss_fn, device, 'fct')
 
             """ Saving the model """
             if valid_loss < best_valid_loss:
