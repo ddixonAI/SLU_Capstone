@@ -120,7 +120,7 @@ def train_model_unet():
             start_time = time.time()
 
             train_loss = train(model, train_loader, optimizer, loss_fn, device, 'unet')
-            valid_loss = evaluate(model, valid_loader, loss_fn, device)
+            valid_loss = evaluate(model, valid_loader, loss_fn, device, 'unet')
 
             """ Saving the model """
             if valid_loss < best_valid_loss:
