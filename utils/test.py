@@ -6,7 +6,7 @@ import cv2
 from tqdm import tqdm
 import imageio
 import torch
-from sklearn.metrics import accuracy_score, f1_score, jaccard_score, precision_score, recall_score
+from sklearn.metrics import accuracy_score, f1_score, jaccard_score, precision_score, recall_score, roc_auc_score
 from utils.define_fct import build_fct
 
 from utils.define_unet import build_unet
@@ -30,8 +30,9 @@ def calculate_metrics(y_true, y_pred):
     score_recall = recall_score(y_true, y_pred)
     score_precision = precision_score(y_true, y_pred)
     score_acc = accuracy_score(y_true, y_pred)
+    score_auc = roc_auc_score(y_true, y_pred)
 
-    return [score_jaccard, score_f1, score_recall, score_precision, score_acc]
+    return [score_jaccard, score_f1, score_recall, score_precision, score_acc, score_auc]
 
 def mask_parse(mask):
     mask = np.expand_dims(mask, axis=-1)    ## (512, 512, 1)
@@ -70,7 +71,7 @@ def model_performance(modArch):
     model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     model.eval()
 
-    metrics_score = [0.0, 0.0, 0.0, 0.0, 0.0]
+    metrics_score = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     time_taken = []
 
     for i, (x, y) in tqdm(enumerate(zip(test_x, test_y)), total=len(test_x)):
@@ -173,6 +174,7 @@ def model_performance(modArch):
     recall = metrics_score[2]/len(test_x)
     precision = metrics_score[3]/len(test_x)
     acc = metrics_score[4]/len(test_x)
+    auc = metrics_score[5]/len(test_x)
     print(f"Jaccard: {jaccard:1.4f}")
     print('')
     print(f'F1: {f1:1.4f}')
@@ -183,6 +185,7 @@ def model_performance(modArch):
     print('')
     print(f'Accuracy: {acc:1.4f}')
     print('')
+    print(f'AUC ROC: {auc:1.4f}')
 
 
     fps = 1/np.mean(time_taken)

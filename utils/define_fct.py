@@ -244,7 +244,7 @@ class build_fct(nn.Module):
 
         # attention heads and filters per block
         att_heads = [2, 4, 8, 12, 16, 12, 8, 4, 2]
-        filters = [8, 16, 32, 64, 128, 64, 32, 16, 8] # following the UNET shape
+        filters = [16, 32, 64, 128, 384, 128, 64, 32, 16] # following the FCT paper
 
         # number of blocks used in the model
         blocks = len(filters)
